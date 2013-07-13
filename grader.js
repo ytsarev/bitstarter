@@ -40,10 +40,6 @@ var assertFileExists = function(infile) {
 var assertUrlExists = function(infile) {
     var instr = infile.toString();
     rest.get(instr).on('complete', function(result, response) {
-      if ((result instanceof Error) || (response.statusCode != 200))  {
-        console.log("%s does not exist. Exiting.", instr);
-        process.exit(1); // http://nodejs.org/api/process.html#process_process_exit_code
-      }
     });
     return instr;
 };
@@ -73,9 +69,16 @@ var checkHtmlFile = function(htmlfile, checksfile) {
 };
 
 var checkURL = function(url, checksfile) {
-    rest.get(url).on('complete', function(data) {
-      $ = cheerio.load(data);
-      runChecks($, checksfile);
+    rest.get(url).on('complete', function(data, response) {
+      if ((data instanceof Error) || (response.statusCode != 200))  {
+        console.log("%s does not exist. Exiting.", url);
+        process.exit(1); // http://nodejs.org/api/process.html#process_process_exit_code
+      }
+      else
+      {
+        $ = cheerio.load(data);
+        runChecks($, checksfile);
+      }
     });
 };
 
@@ -89,7 +92,7 @@ if(require.main == module) {
     program
         .option('-c, --checks <check_file>', 'Path to checks.json', clone(assertFileExists), CHECKSFILE_DEFAULT)
         .option('-f, --file <html_file>', 'Path to index.html', clone(assertFileExists), HTMLFILE_DEFAULT)
-        .option('-u, --url <url>', 'URL', clone(assertUrlExists))
+        .option('-u, --url <url>', 'URL')
         .parse(process.argv);
     if (typeof program.url !== 'undefined' ) {
        checkURL(program.url, program.checks);
